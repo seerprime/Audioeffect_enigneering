@@ -20,8 +20,8 @@
 ## 👥 Development Team
 
 **Made by:**
-- **Shourya Bhardwaj** - Lead Developer & DSP Engineer
-- **Abhinav Kumar** - Co-Engineer & Frontend Architect
+- **Shourya Bhardwaj** - Lead Developer 
+- **Abhinav Kumar** - Co-Engineer
 
 **Core Engineering Team:** 3 Members
 
