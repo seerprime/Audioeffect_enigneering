@@ -23,7 +23,6 @@
 - **Shourya Bhardwaj** - Lead Developer 
 - **Abhinav Kumar** - Co-Engineer
 
-**Core Engineering Team:** 3 Members
 
 ---
 
