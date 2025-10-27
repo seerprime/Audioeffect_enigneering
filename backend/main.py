@@ -36,10 +36,24 @@ def _make_filename(prefix="out", ext=".wav"):
 
 
 def _ensure_mono(y: np.ndarray) -> np.ndarray:
-    """Return mono (1D) array; if stereo, average channels."""
+    """
+    Return mono (1D) array.
+    Handles either:
+      - soundfile shape: (frames, channels)  -> average axis=1
+      - librosa (mono=False) shape: (channels, samples) -> average axis=0
+    """
+    if y is None:
+        return y
+    y = np.asarray(y)
     if y.ndim == 1:
         return y
-    return np.mean(y, axis=1)
+    # decide which axis is time (longer dimension)
+    if y.shape[0] >= y.shape[1]:
+        # probably (frames, channels)
+        return np.mean(y, axis=1)
+    else:
+        # probably (channels, samples)
+        return np.mean(y, axis=0)
 
 
 def _generate_impulse_response(sr: int, length_sec: float = 1.0, decay: float = 3.0):
@@ -160,7 +174,6 @@ def upload_and_process():
     try:
         if "settings" in request.form:
             import json
-
             settings = json.loads(request.form["settings"])
     except Exception:
         settings = {}
@@ -169,11 +182,17 @@ def upload_and_process():
     in_path = _make_filename(prefix="in", ext=os.path.splitext(f.filename)[1] or ".wav")
     f.save(in_path)
 
-    # Load with librosa to preserve sample rate & convert to float
+    # Try decoding with soundfile first (often more reliable & full-length)
     try:
-        y, sr = librosa.load(in_path, sr=None, mono=False)
-    except Exception as e:
-        return jsonify({"error": f"Could not read uploaded audio: {e}"}), 400
+        data, sr = sf.read(in_path, always_2d=False)
+        y = np.asarray(data).astype(np.float32)
+    except Exception:
+        # fallback to librosa
+        try:
+            y, sr = librosa.load(in_path, sr=None, mono=False)
+            y = np.asarray(y).astype(np.float32)
+        except Exception as e:
+            return jsonify({"error": f"Could not read uploaded audio: {e}"}), 400
 
     # convert to mono for processing convenience
     y_mono = _ensure_mono(y)
@@ -196,8 +215,6 @@ def upload_and_process():
     except Exception:
         # fallback: return the uploaded file as-is
         orig_out_path = in_path
-
-    base_url = request.host_url.rstrip("/")
 
     response = {
         "original_url": f"/file/{os.path.basename(orig_out_path)}",
